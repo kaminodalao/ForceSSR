@@ -18,15 +18,20 @@ app = Flask(__name__)
 r = redis.Redis(host='127.0.0.1', port=6379)
 
 WHITELIST = []
+CHECK_DOMAIN = True
 
 if os.getenv('DOMAINS') is not None:
     for domain in os.getenv('DOMAINS').split(','):
         if len(domain) > 0 and domain not in WHITELIST:
             WHITELIST.append(domain)
 
+if os.getenv('DOMAINS') == '*':
+    CHECK_DOMAIN = False
+
+
 def record(url, method, status_code, client_ip, client_ua):
     text = "[%s]%s %s %s %s %s" % (time.strftime("%Y-%m-%d %H:%M:%S",
-          time.localtime()), url, method, status_code, client_ip, client_ua)
+                                                 time.localtime()), url, method, status_code, client_ip, client_ua)
     print(text)
 
 
@@ -35,7 +40,7 @@ def record(url, method, status_code, client_ip, client_ua):
 def load_page(path=""):
     url = request.url
     url_data = urlparse(url)
-    if url_data.netloc not in WHITELIST:
+    if CHECK_DOMAIN and url_data.netloc not in WHITELIST:
         return "Request Error", 400
     url = url.replace(url_data.scheme, request.headers['X-Scheme'])
     hash = hashlib.md5(url.encode('utf8')).hexdigest()
@@ -75,8 +80,9 @@ def load_page(path=""):
             'content': content,
             'status_code': status_code
         }), ex=86400)
-    
-    record(url,method,status_code,request.headers['X-Real-IP'],request.headers['User-Agent'])
+
+    record(url, method, status_code,
+           request.headers['X-Real-IP'], request.headers['User-Agent'])
 
     return content, status_code
 
