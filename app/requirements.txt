@@ -1,0 +1,6 @@
+flask
+requests
+selenium
+beautifulsoup4
+uwsgi
+redis
